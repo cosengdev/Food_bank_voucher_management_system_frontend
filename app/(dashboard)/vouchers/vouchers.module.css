@@ -1,0 +1,194 @@
+/* ── VOUCHERS ── */
+
+.filterRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 13px;
+  font-family: 'Georgia', serif;
+  color: var(--text);
+  outline: none;
+  transition: box-shadow 0.2s;
+  background: var(--white);
+  flex: 1;
+  min-width: 140px;
+}
+
+.input:focus {
+  box-shadow: 0 0 0 3px rgba(29,111,191,.12);
+}
+
+.select {
+  composes: input;
+  cursor: pointer;
+  flex: 0 0 auto;
+  min-width: 130px;
+}
+
+.btnPrimary {
+  padding: 9px 18px;
+  border-radius: 7px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-family: 'Georgia', serif;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.btnPrimary:hover { background: #1560a8; }
+
+.btn {
+  padding: 9px 16px;
+  border-radius: 7px;
+  background: var(--white);
+  color: var(--text);
+  font-size: 13px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-family: 'Georgia', serif;
+  transition: background 0.2s;
+}
+
+.btn:hover { background: var(--off-white); }
+
+.resultCount {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* ── Table card ── */
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tbl th {
+  text-align: left;
+  padding: 9px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--off-white);
+}
+
+.tbl td {
+  padding: 11px 14px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.tbl tr:last-child td { border-bottom: none; }
+.tbl tr:hover td { background: #f8fafc; cursor: pointer; }
+
+.mono {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--off-white);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--navy);
+}
+
+.bold {
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pillGreen { background: var(--green-light); color: var(--green); }
+.pillAmber { background: var(--amber-light); color: var(--amber); }
+.pillBlue { background: var(--blue-light); color: var(--blue); }
+.pillRed { background: var(--red-light); color: var(--red); }
+.pillGray { background: var(--off-white); color: var(--text-muted); }
+
+/* ── Expanded detail row ── */
+.detailRow td {
+  background: var(--off-white);
+  padding: 0 14px;
+}
+
+.detailInner {
+  padding: 16px 0;
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.detailCol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detailLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.detailValue {
+  font-size: 13px;
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.detailActions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.btnGreen {
+  composes: btn;
+  color: var(--green);
+  border-color: var(--green);
+}
+
+.btnGreen:hover {
+  background: var(--green-light);
+}
+
+.btnRed {
+  composes: btn;
+  color: var(--red);
+  border-color: var(--red);
+}
+
+.btnRed:hover {
+  background: var(--red-light);
+}
