@@ -38,7 +38,7 @@ export default function LoginPage() {
 
       {/* TOP LOGO BAR */}
       <div className={styles.topbar}>
-        <div className={styles.logoDot}></div>
+        {/* <div className={styles.logoDot}></div> */}
         <span className={styles.logoName}>City of God Foodbank</span>
       </div>
 

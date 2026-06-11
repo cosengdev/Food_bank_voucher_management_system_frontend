@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { mockStaff, mockCentres } from '@/lib/mockData'
 import styles from './settings.module.css'
 
 const rolePill = (role) => {
   if (role === 'Super Admin') return styles.pillNavy
-  if (role === 'Centre Admin') return styles.pillBlue
+  if (role === 'Centre Admin') return styles.pillGreen
   if (role === 'Read-only') return styles.pillAmber
   return styles.pillGray
 }
@@ -24,6 +25,7 @@ const permissions = [
 ]
 
 export default function SettingsPage() {
+  const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
   const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: '', centre: '' })
   const [staff, setStaff] = useState(mockStaff)
@@ -31,6 +33,12 @@ export default function SettingsPage() {
   
   const [centreModalOpen, setCentreModalOpen] = useState(false)
   const [centreForm, setCentreForm] = useState({ name: '', address: '', delivery: 'Yes', openingTimes: '', staff: '0' })
+
+  function handleLogout() {
+    localStorage.removeItem('token')
+    sessionStorage.clear()
+    router.push('/login')
+  }
 
   function handleInvite() {
     if (!inviteForm.name || !inviteForm.email || !inviteForm.role || !inviteForm.centre) {
@@ -162,6 +170,17 @@ export default function SettingsPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Log out button */}
+      <div className={styles.logoutRow}>
+        <button
+          className={styles.btnLogout}
+          onClick={handleLogout}
+          id="settings-logout-button"
+        >
+          Log out
+        </button>
       </div>
 
       {/* Invite user modal */}

@@ -82,7 +82,7 @@
 .btnPrimary {
   padding: 9px 18px;
   border-radius: 7px;
-  background: var(--blue);
+  background: var(--green);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
@@ -93,7 +93,7 @@
   transition: background 0.2s;
 }
 
-.btnPrimary:hover { background: #1560a8; }
+.btnPrimary:hover { background: #14693e; }
 
 .btn {
   padding: 9px 16px;
@@ -203,7 +203,7 @@
 }
 
 .input:focus {
-  box-shadow: 0 0 0 3px rgba(29,111,191,.12);
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
 }
 
 .select {
@@ -266,6 +266,31 @@
 .checkNo {
   composes: check;
   color: var(--red);
+}
+
+/* ── Logout ── */
+.logoutRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+
+.btnLogout {
+  padding: 10px 28px;
+  border-radius: 7px;
+  background: var(--white);
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--red);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.btnLogout:hover {
+  background: var(--red);
+  color: #fff;
 }
 
 /* ── Responsive ── */

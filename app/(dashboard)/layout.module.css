@@ -6,11 +6,10 @@
   background: var(--off-white);
 }
 
-/* ── SIDEBAR ── */
 .sidebar {
   width: 230px;
   flex-shrink: 0;
-  background: var(--navy);
+  background: var(--navy); /* Keep dark, maybe we should change to dark green? For now I'll change references below to green instead of blue */
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -28,7 +27,7 @@
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: var(--blue);
+  background: var(--green);
   flex-shrink: 0;
 }
 
@@ -85,7 +84,7 @@
 }
 
 .navItemActive {
-  background: var(--blue) !important;
+  background: var(--green) !important;
   color: #fff !important;
   font-weight: 600;
 }
@@ -129,7 +128,7 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: var(--blue);
+  background: var(--green);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -150,6 +149,28 @@
 .userRole {
   font-size: 10px;
   color: rgba(255,255,255,0.45);
+}
+
+.logoutBtn {
+  margin-left: auto;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.logoutBtn:hover {
+  background: rgba(192, 57, 43, 0.25);
+  color: #ff6b6b;
 }
 
 /* ── MAIN ── */
@@ -175,7 +196,6 @@
   font-size: 17px;
   font-weight: 700;
   color: var(--navy);
-  font-family: 'Georgia', serif;
 }
 
 .topbarRight {
@@ -189,7 +209,7 @@
   border-radius: 7px;
   border: 1px solid var(--border);
   font-size: 13px;
-  font-family: 'Georgia', serif;
+  font-family: inherit;
   color: var(--text);
   background: var(--white);
   outline: none;
@@ -199,17 +219,17 @@
 .btnPrimary {
   padding: 8px 18px;
   border-radius: 7px;
-  background: var(--blue);
+  background: var(--green);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
-  font-family: 'Georgia', serif;
+  font-family: inherit;
   transition: background 0.2s;
 }
 
 .btnPrimary:hover {
-  background: #1560a8;
+  background: #14693e;
 }
 
 /* ── CONTENT ── */

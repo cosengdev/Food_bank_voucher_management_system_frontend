@@ -23,7 +23,7 @@
 }
 
 body {
-  font-family: 'Georgia', serif;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
   background: var(--off-white);
   color: var(--text);
 }

@@ -1,7 +1,7 @@
 /* ── PAGE ── */
 .page {
   min-height: 100vh;
-  background: var(--navy);
+  background: linear-gradient(160deg, #e8f5e9 0%, #f1f8e9 40%, #ffffff 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -24,7 +24,7 @@
   width: 500px;
   height: 500px;
   border-radius: 50%;
-  background: rgba(29, 111, 191, 0.15);
+  background: rgba(76, 175, 80, 0.12);
 }
 
 .bgCircle2 {
@@ -34,7 +34,7 @@
   width: 450px;
   height: 450px;
   border-radius: 50%;
-  background: rgba(29, 111, 191, 0.1);
+  background: rgba(56, 142, 60, 0.08);
 }
 
 .bgCircle3 {
@@ -45,7 +45,7 @@
   width: 600px;
   height: 600px;
   border-radius: 50%;
-  background: rgba(29, 111, 191, 0.05);
+  background: rgba(129, 199, 132, 0.1);
 }
 
 /* ── TOPBAR ── */
@@ -63,14 +63,14 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: var(--blue);
+  background: var(--green);
   flex-shrink: 0;
 }
 
 .logoName {
   font-size: 13px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text);
   letter-spacing: 0.02em;
 }
 
@@ -96,25 +96,24 @@
 .heroEyebrow {
   font-size: 11px;
   font-weight: 600;
-  color: var(--blue-light);
+  color: var(--green);
   text-transform: uppercase;
   letter-spacing: 0.14em;
   margin-bottom: 10px;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .heroTitle {
-  font-family: 'Georgia', serif;
   font-size: 32px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text);
   line-height: 1.2;
   margin-bottom: 12px;
 }
 
 .heroSub {
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-muted);
   line-height: 1.8;
   max-width: 400px;
   margin: 0 auto;
@@ -127,7 +126,8 @@
   padding: 40px 44px;
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(76, 175, 80, 0.12);
 }
 
 .formHeader {
@@ -135,10 +135,9 @@
 }
 
 .formTitle {
-  font-family: 'Georgia', serif;
   font-size: 22px;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--text);
   margin-bottom: 4px;
 }
 
@@ -167,7 +166,7 @@
   display: block;
   font-size: 12px;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--text);
   margin-bottom: 6px;
   letter-spacing: 0.03em;
 }
@@ -178,7 +177,7 @@
   border-radius: 7px;
   border: 1px solid var(--border);
   font-size: 13px;
-  font-family: 'Georgia', serif;
+  font-family: inherit;
   color: var(--text);
   background: var(--off-white);
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -186,8 +185,8 @@
 }
 
 .input:focus {
-  border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(29, 111, 191, 0.12);
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
   background: var(--white);
 }
 
@@ -206,7 +205,7 @@
   transform: translateY(-50%);
   font-size: 11px;
   font-weight: 600;
-  color: var(--blue);
+  color: var(--green);
   cursor: pointer;
   user-select: none;
 }
@@ -219,7 +218,7 @@
 
 .forgot a {
   font-size: 12px;
-  color: var(--blue);
+  color: var(--green);
   text-decoration: none;
   font-weight: 500;
 }
@@ -233,19 +232,19 @@
   width: 100%;
   padding: 12px;
   border-radius: 7px;
-  background: var(--blue);
+  background: var(--green);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  font-family: 'Georgia', serif;
+  font-family: inherit;
   letter-spacing: 0.02em;
   transition: background 0.2s, transform 0.15s;
 }
 
 .btnPrimary:hover {
-  background: #1560a8;
+  background: #14693e;
   transform: translateY(-1px);
 }
 
@@ -267,8 +266,8 @@
   text-align: center;
   padding: 16px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.3);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 /* ── RESPONSIVE ── */

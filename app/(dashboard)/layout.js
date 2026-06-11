@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import styles from './layout.module.css'
 
 const navItems = [
@@ -32,7 +32,15 @@ const navItems = [
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [centre, setCentre] = useState('Peckham Centre')
+
+  function handleLogout() {
+    // Clear any stored auth (expand as needed)
+    localStorage.removeItem('token')
+    sessionStorage.clear()
+    router.push('/login')
+  }
 
   return (
     <div className={styles.app}>
@@ -40,7 +48,7 @@ export default function DashboardLayout({ children }) {
       {/* SIDEBAR */}
       <aside className={styles.sidebar}>
         <div className={styles.sidebarTop}>
-          <div className={styles.logoDot}></div>
+          {/* <div className={styles.logoDot}></div> */}
           <div className={styles.logoText}>
             <div className={styles.logoName}>City of God Foodbank</div>
             <div className={styles.logoSub}>Voucher Management System</div>
@@ -75,6 +83,14 @@ export default function DashboardLayout({ children }) {
               <div className={styles.userName}>Jane Adeyemi</div>
               <div className={styles.userRole}>Centre Admin</div>
             </div>
+            <button
+              className={styles.logoutBtn}
+              onClick={handleLogout}
+              title="Log out"
+              id="logout-button"
+            >
+              ⤺
+            </button>
           </div>
         </div>
       </aside>
