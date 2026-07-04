@@ -1,35 +1,62 @@
 'use client'
-
-import { useState } from 'react'
-import { mockVouchers } from '@/lib/mockData'
+import { useState, useEffect } from 'react'
+import { apiService } from '../../../lib/api'
 import styles from './vouchers.module.css'
 
-const statusPill = (s) => {
-  if (s === 'issued') return { cls: styles.pillGreen, label: 'Issued' }
-  if (s === 'fulfilled') return { cls: styles.pillAmber, label: 'Fulfilled' }
-  if (s === 'cancelled') return { cls: styles.pillBlue, label: 'Cancelled' }
-  return { cls: styles.pillGray, label: s }
-}
-
-const typePill = (t) => {
-  if (t === 'repeat') return { cls: styles.pillRed, label: 'Repeat' }
-  return { cls: styles.pillGray, label: 'Standard' }
-}
+import { mockVouchers } from '../../../lib/mockData'
 
 export default function VouchersPage() {
+  const [vouchers, setVouchers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [errorNotice, setErrorNotice] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [centreFilter, setCentreFilter] = useState('all')
   const [expanded, setExpanded] = useState(null)
 
-  const filtered = mockVouchers.filter(v => {
-    const matchSearch = search.length === 0 ||
-      v.ref.toLowerCase().includes(search.toLowerCase()) ||
-      v.client.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = statusFilter === 'all' || v.status === statusFilter
-    const matchCentre = centreFilter === 'all' || v.centre.toLowerCase() === centreFilter.toLowerCase()
-    return matchSearch && matchStatus && matchCentre
-  })
+  const fetchVouchers = async () => {
+    try {
+      setLoading(true)
+      setErrorNotice(null)
+      const res = await apiService.getVouchers({ search, status, centre })
+      const list = Array.isArray(res) ? res : res?.data || []
+      setVouchers(list)
+    } catch (err) {
+      console.warn('Backend vouchers endpoint error (500), using local fallback:', err.message)
+      setErrorNotice('Railway backend returned server error (500). Showing fallback vouchers list.')
+      // Filter mock vouchers as fallback
+      const filteredMock = mockVouchers.filter(v => {
+        const matchSearch = v.ref.toLowerCase().includes(search.toLowerCase()) || v.client.toLowerCase().includes(search.toLowerCase())
+        const matchStatus = status === 'all' || v.status === status
+        const matchCentre = centre === 'all' || v.centre.toLowerCase() === centre.toLowerCase()
+        return matchSearch && matchStatus && matchCentre
+      })
+      setVouchers(filteredMock)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchVouchers()
+  }, [search, status, centre])
+
+  const handleStatusUpdate = async (id, newStatus) => {
+    try {
+      if (newStatus === 'fulfilled') {
+        await apiService.fulfillVoucher(id)
+      } else if (newStatus === 'cancelled') {
+        await apiService.cancelVoucher(id, 'Cancelled by user')
+      } else {
+        await apiService.updateVoucher(id, { status: newStatus })
+      }
+      fetchVouchers()
+    } catch (err) {
+      alert('Failed to update voucher status: ' + err.message)
+    }
+  }
+
+  const statusClass = { issued: styles.pillGreen, fulfilled: styles.pillAmber, cancelled: styles.pillBlue }
 
   return (
     <div>
@@ -52,12 +79,16 @@ export default function VouchersPage() {
           <option value="Peckham">Peckham</option>
           <option value="Brixton">Brixton</option>
         </select>
-        <button className={styles.btnPrimary} type="button">Filter</button>
+        <button className={styles.btn} onClick={fetchVouchers}>Filter</button>
       </div>
-
-      <div className={styles.resultCount}>Showing {filtered.length} voucher{filtered.length !== 1 ? 's' : ''}</div>
-
-      {/* Table */}
+      <div className={styles.resultCount}>
+        {loading ? 'Loading vouchers from API...' : `Showing ${vouchers.length} voucher${vouchers.length !== 1 ? 's' : ''}`}
+      </div>
+      {errorNotice && (
+        <div style={{background:'#fffeb3',border:'1px solid #ffd700',color:'#8a6d3b',padding:'10px 14px',borderRadius:'6px',fontSize:'13px',marginBottom:'16px'}}>
+          ⚠️ {errorNotice}
+        </div>
+      )}
       <div className={styles.card}>
         <table className={styles.tbl}>
           <thead>
@@ -72,69 +103,37 @@ export default function VouchersPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.flatMap(v => {
-              const sp = statusPill(v.status)
-              const tp = typePill(v.type)
-              const isExpanded = expanded === v.id
-              const rows = [
-                <tr key={v.id} onClick={() => setExpanded(isExpanded ? null : v.id)}>
-                  <td><span className={styles.mono}>{v.ref}</span></td>
-                  <td><span className={styles.bold}>{v.client}</span></td>
+            {vouchers.map(v => (
+              <tr key={v.id} style={{display:'contents'}}>
+                <tr onClick={() => setExpanded(expanded === v.id ? null : v.id)} style={{cursor:'pointer'}}>
+                  <td className={styles.mono}>{v.ref}</td>
+                  <td><strong>{v.client}</strong></td>
                   <td>{v.centre}</td>
                   <td>{v.issuedBy}</td>
                   <td>{v.date}</td>
-                  <td><span className={`${styles.pill} ${sp.cls}`}>{sp.label}</span></td>
-                  <td><span className={`${styles.pill} ${tp.cls}`}>{tp.label}</span></td>
+                  <td><span className={`${styles.pill} ${statusClass[v.status] || styles.pillGray}`}>{v.status}</span></td>
+                  <td><span className={`${styles.pill} ${v.type === 'repeat' ? styles.pillRed : styles.pillGray}`}>{v.type}</span></td>
                 </tr>
               ]
               if (isExpanded) {
                 rows.push(
                   <tr key={`${v.id}-detail`} className={styles.detailRow}>
                     <td colSpan={7}>
-                      <div className={styles.detailInner}>
-                        <div className={styles.detailCol}>
-                          <span className={styles.detailLabel}>Reference</span>
-                          <span className={styles.detailValue}>{v.ref}</span>
-                        </div>
-                        <div className={styles.detailCol}>
-                          <span className={styles.detailLabel}>Client</span>
-                          <span className={styles.detailValue}>{v.client}</span>
-                        </div>
-                        <div className={styles.detailCol}>
-                          <span className={styles.detailLabel}>Centre</span>
-                          <span className={styles.detailValue}>{v.centre}</span>
-                        </div>
-                        <div className={styles.detailCol}>
-                          <span className={styles.detailLabel}>Issued By</span>
-                          <span className={styles.detailValue}>{v.issuedBy}</span>
-                        </div>
-                        <div className={styles.detailCol}>
-                          <span className={styles.detailLabel}>Date</span>
-                          <span className={styles.detailValue}>{v.date}</span>
-                        </div>
-                        <div className={styles.detailCol}>
-                          <span className={styles.detailLabel}>Status</span>
-                          <span className={styles.detailValue}>{sp.label}</span>
-                        </div>
-                        <div className={styles.detailCol}>
-                          <span className={styles.detailLabel}>Type</span>
-                          <span className={styles.detailValue}>{tp.label}</span>
-                        </div>
-                        <div className={styles.detailActions}>
-                          {v.status === 'issued' && (
-                            <>
-                              <button className={styles.btnGreen} type="button" onClick={(e) => { e.stopPropagation(); alert(`${v.ref} marked as fulfilled.`) }}>✓ Mark fulfilled</button>
-                              <button className={styles.btnRed} type="button" onClick={(e) => { e.stopPropagation(); alert(`${v.ref} has been cancelled.`) }}>✕ Cancel voucher</button>
-                            </>
-                          )}
+                      <div className={styles.expandContent}>
+                        <div><span className={styles.expandLabel}>Full reference:</span> {v.ref}</div>
+                        <div><span className={styles.expandLabel}>Client:</span> {v.client}</div>
+                        <div><span className={styles.expandLabel}>Centre:</span> {v.centre}</div>
+                        <div><span className={styles.expandLabel}>Issued by:</span> {v.issuedBy}</div>
+                        <div className={styles.expandActions}>
+                          <button className={styles.btn} onClick={() => handleStatusUpdate(v.id, 'fulfilled')}>Mark fulfilled</button>
+                          <button className={styles.btnDanger} onClick={() => handleStatusUpdate(v.id, 'cancelled')}>Cancel voucher</button>
                         </div>
                       </div>
                     </td>
                   </tr>
-                )
-              }
-              return rows
-            })}
+                )}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

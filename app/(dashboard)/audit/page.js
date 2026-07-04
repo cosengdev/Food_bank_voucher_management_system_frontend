@@ -1,7 +1,6 @@
 'use client'
-
-import { useState } from 'react'
-import { mockAuditLog } from '@/lib/mockData'
+import { useState, useEffect } from 'react'
+import { apiService } from '../../../lib/api'
 import styles from './audit.module.css'
 
 const dotClass = (type) => {
@@ -33,18 +32,29 @@ const users = [
 ]
 
 export default function AuditPage() {
+  const [auditLogs, setAuditLogs] = useState([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [actionFilter, setActionFilter] = useState('all')
-  const [userFilter, setUserFilter] = useState('all')
+  const [type, setType] = useState('all')
+  const [user, setUser] = useState('all')
 
-  const filtered = mockAuditLog.filter(e => {
-    const matchSearch = search.length === 0 ||
-      e.action.toLowerCase().includes(search.toLowerCase()) ||
-      e.detail.toLowerCase().includes(search.toLowerCase())
-    const matchAction = actionFilter === 'all' || e.type === actionFilter
-    const matchUser = userFilter === 'all' || e.user === userFilter
-    return matchSearch && matchAction && matchUser
-  })
+  const fetchLogs = async () => {
+    try {
+      setLoading(true)
+      const res = await apiService.getAuditLogs({ search, type, user })
+      setAuditLogs(res.data || [])
+    } catch (err) {
+      console.error('Failed to fetch audit logs:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchLogs()
+  }, [search, type, user])
+
+  const dotColor = { auth:'#64748b', voucher:'var(--blue)', consent:'var(--green)', export:'var(--amber)', client:'var(--navy)', cancel:'var(--red)' }
 
   return (
     <div>
@@ -72,28 +82,23 @@ export default function AuditPage() {
 
       {/* Audit entries */}
       <div className={styles.card}>
-        <div className={styles.entryList}>
-          {filtered.map(e => (
+        {loading ? (
+          <div style={{padding:'30px',textAlign:'center',color:'var(--text-muted)'}}>Loading audit log from API...</div>
+        ) : auditLogs.length === 0 ? (
+          <div style={{padding:'30px',textAlign:'center',color:'var(--text-muted)'}}>No audit records found.</div>
+        ) : (
+          auditLogs.map(e => (
             <div key={e.id} className={styles.entry}>
-              <div className={dotClass(e.type)} />
-              <div className={styles.entryBody}>
-                <div className={styles.entryTop}>
-                  <span className={styles.entryTime}>{e.time}</span>
-                  <span className={styles.entryAction}>{e.action}</span>
-                </div>
-                <div className={styles.entryDetail}>{e.detail}</div>
-                <div className={styles.entryMeta}>{e.user} · {e.centre}</div>
+              <div className={styles.dot} style={{background: dotColor[e.type] || 'var(--blue)'}}></div>
+              <div className={styles.time}>{e.time}</div>
+              <div className={styles.body}>
+                <div className={styles.action}>{e.action}</div>
+                <div className={styles.detail}>{e.detail}</div>
+                <div className={styles.meta}>{e.user} · {e.centre}</div>
               </div>
             </div>
-          ))}
-          {filtered.length === 0 && (
-            <div className={styles.entry}>
-              <div className={styles.entryBody}>
-                <div className={styles.entryDetail}>No audit entries match your filters.</div>
-              </div>
-            </div>
-          )}
-        </div>
+          ))
+        )}
       </div>
     </div>
   )

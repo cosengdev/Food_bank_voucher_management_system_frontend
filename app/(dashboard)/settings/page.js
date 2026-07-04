@@ -1,8 +1,6 @@
 'use client'
-
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { mockStaff, mockCentres } from '@/lib/mockData'
+import { useState, useEffect } from 'react'
+import { apiService } from '../../../lib/api'
 import styles from './settings.module.css'
 
 const rolePill = (role) => {
@@ -24,8 +22,12 @@ const permissions = [
   { action: 'System configuration',   superAdmin: true, centreAdmin: false, staff: false, volunteer: false, readOnly: false },
 ]
 
+const roleClass = { 'Centre Admin': 'pillBlue', 'Staff': 'pillGray', 'Volunteer': 'pillGray', 'Read-only': 'pillAmber', 'Super Admin': 'pillNavy', 'super_admin': 'pillNavy' }
+
 export default function SettingsPage() {
-  const router = useRouter()
+  const [staff, setStaff] = useState([])
+  const [centres, setCentres] = useState([])
+  const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: '', centre: '' })
   const [staff, setStaff] = useState(mockStaff)
@@ -75,6 +77,55 @@ export default function SettingsPage() {
     setCentreForm({ name: '', address: '', delivery: 'Yes', openingTimes: '', staff: '0' })
   }
 
+  // Invite user form
+  const [inviteName, setInviteName] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('Centre Admin')
+  const [inviteCentre, setInviteCentre] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const loadSettingsData = async () => {
+    try {
+      setLoading(true)
+      const [usersRes, centresRes] = await Promise.all([
+        apiService.getUsers(),
+        apiService.getCentres()
+      ])
+      setStaff(usersRes.data || [])
+      setCentres(centresRes.data || [])
+    } catch (err) {
+      console.error('Failed to load settings data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadSettingsData()
+  }, [])
+
+  const handleInviteUser = async (e) => {
+    e?.preventDefault()
+    try {
+      setSubmitting(true)
+      await apiService.inviteUser({
+        name: inviteName,
+        email: inviteEmail,
+        role: inviteRole,
+        centre: inviteCentre,
+      })
+      alert('Invite sent successfully!')
+      setModalOpen(false)
+      setInviteName('')
+      setInviteEmail('')
+      loadSettingsData()
+    } catch (err) {
+      alert('Failed to send invite: ' + err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div>
       {/* Two cards side by side */}
@@ -82,64 +133,48 @@ export default function SettingsPage() {
 
         {/* Staff accounts */}
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Staff Accounts</div>
-          <table className={styles.tbl}>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Centre</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {staff.map(s => (
-                <tr key={s.id}>
-                  <td><span className={styles.bold}>{s.name}</span></td>
-                  <td><span className={`${styles.pill} ${rolePill(s.role)}`}>{s.role}</span></td>
-                  <td>{s.centre}</td>
-                  <td><span className={`${styles.pill} ${statusPill(s.status)}`}>{s.status}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <button className={styles.btnPrimary} type="button" onClick={() => setModalOpen(true)}>
-            + Invite user
-          </button>
+          <div className={styles.cardTitle}>Staff & user accounts</div>
+          {loading ? (
+            <div style={{padding:'20px',textAlign:'center',color:'var(--text-muted)'}}>Loading staff...</div>
+          ) : (
+            <table className={styles.tbl}>
+              <thead><tr><th>Name</th><th>Role</th><th>Centre</th><th>Status</th></tr></thead>
+              <tbody>
+                {staff.map((s, idx) => (
+                  <tr key={s.id || idx}>
+                    <td><strong>{s.name || s.first_name + ' ' + s.last_name || s.email}</strong></td>
+                    <td><span className={`${styles.pill} ${styles[roleClass[s.role]] || styles.pillGray}`}>{s.role}</span></td>
+                    <td>{s.centre || 'All centres'}</td>
+                    <td><span className={`${styles.pill} ${styles.pillGreen}`}>{s.status || 'Active'}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <button className={styles.btnPrimary} style={{marginTop:'14px'}} onClick={() => setModalOpen(true)}>+ Invite user</button>
         </div>
 
         {/* Centres */}
         <div className={styles.card}>
-          <div className={styles.cardTitle}>Centres</div>
-          <table className={styles.tbl}>
-            <thead>
-              <tr>
-                <th>Centre</th>
-                <th>Address</th>
-                <th>Delivery</th>
-                <th>Hours</th>
-                <th>Staff</th>
-              </tr>
-            </thead>
-            <tbody>
-              {centres.map(c => (
-                <tr key={c.id}>
-                  <td><span className={styles.bold}>{c.name}</span></td>
-                  <td>{c.address}</td>
-                  <td>
-                    <span className={`${styles.pill} ${c.delivery ? styles.pillGreen : styles.pillGray}`}>
-                      {c.delivery ? 'Available' : 'Not available'}
-                    </span>
-                  </td>
-                  <td>{c.openingTimes}</td>
-                  <td>{c.staff}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <button className={styles.btnPrimary} type="button" onClick={() => setCentreModalOpen(true)}>
-            + Add centre
-          </button>
+          <div className={styles.cardTitle}>Foodbank centres</div>
+          {loading ? (
+            <div style={{padding:'20px',textAlign:'center',color:'var(--text-muted)'}}>Loading centres...</div>
+          ) : (
+            <table className={styles.tbl}>
+              <thead><tr><th>Centre</th><th>Address</th><th>Delivery</th><th>Staff</th></tr></thead>
+              <tbody>
+                {centres.map((c, idx) => (
+                  <tr key={c.id || idx}>
+                    <td><strong>{c.name}</strong></td>
+                    <td style={{fontSize:'12px',color:'var(--text-muted)'}}>{c.address}</td>
+                    <td><span className={`${styles.pill} ${c.delivery ? styles.pillGreen : styles.pillGray}`}>{c.delivery ? 'Available' : 'Not available'}</span></td>
+                    <td>{c.staff || 1}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <button className={styles.btnPrimary} style={{marginTop:'14px'}}>+ Add centre</button>
         </div>
       </div>
 
@@ -185,114 +220,36 @@ export default function SettingsPage() {
 
       {/* Invite user modal */}
       {modalOpen && (
-        <div className={styles.overlay} onClick={() => setModalOpen(false)}>
-          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+        <>
+          <div className={styles.overlay} onClick={() => setModalOpen(false)}></div>
+          <form className={styles.modal} onSubmit={handleInviteUser}>
             <div className={styles.modalHeader}>
               <div className={styles.modalTitle}>Invite Staff Member</div>
-              <button className={styles.modalClose} onClick={() => setModalOpen(false)}>×</button>
+              <button type="button" className={styles.closeBtn} onClick={() => setModalOpen(false)}>×</button>
             </div>
-            <div className={styles.modalBody}>
-              <div className={styles.field}>
-                <label className={styles.label}>Full name</label>
-                <input className={styles.input} value={inviteForm.name} onChange={e => setInviteForm({ ...inviteForm, name: e.target.value })} />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Email address</label>
-                <input className={styles.input} type="email" value={inviteForm.email} onChange={e => setInviteForm({ ...inviteForm, email: e.target.value })} />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Role</label>
-                <select className={styles.select} value={inviteForm.role} onChange={e => setInviteForm({ ...inviteForm, role: e.target.value })}>
-                  <option value="">Select role...</option>
-                  <option value="Centre Admin">Centre Admin</option>
-                  <option value="Staff">Staff</option>
-                  <option value="Volunteer">Volunteer</option>
-                  <option value="Read-only">Read-only</option>
-                </select>
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Centre</label>
-                <select className={styles.select} value={inviteForm.centre} onChange={e => setInviteForm({ ...inviteForm, centre: e.target.value })}>
-                  <option value="">Select centre...</option>
-                  {centres.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                  <option value="All centres">All centres</option>
-                </select>
-              </div>
+            <div className={styles.field}><label className={styles.label}>Full name</label><input className={styles.input} value={inviteName} onChange={e => setInviteName(e.target.value)} required /></div>
+            <div className={styles.field}><label className={styles.label}>Email address</label><input type="email" className={styles.input} value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} required /></div>
+            <div className={styles.field}><label className={styles.label}>Role</label>
+              <select className={styles.input} value={inviteRole} onChange={e => setInviteRole(e.target.value)}>
+                <option>Centre Admin</option>
+                <option>Staff</option>
+                <option>Volunteer</option>
+                <option>Read-only</option>
+              </select>
             </div>
-            <div className={styles.modalFooter}>
-              <button className={styles.btn} type="button" onClick={() => setModalOpen(false)}>Cancel</button>
-              <button className={styles.btnPrimary} type="button" onClick={handleInvite}>Send invite</button>
+            <div className={styles.field}><label className={styles.label}>Assign to centre</label>
+              <select className={styles.input} value={inviteCentre} onChange={e => setInviteCentre(e.target.value)}>
+                {centres.map((c, idx) => <option key={c.id || idx}>{c.name}</option>)}
+              </select>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add centre modal */}
-      {centreModalOpen && (
-        <div className={styles.overlay} onClick={() => setCentreModalOpen(false)}>
-          <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <div className={styles.modalTitle}>Add New Centre</div>
-              <button className={styles.modalClose} onClick={() => setCentreModalOpen(false)}>×</button>
+            <div className={styles.modalActions}>
+              <button type="button" className={styles.btn} onClick={() => setModalOpen(false)}>Cancel</button>
+              <button type="submit" className={styles.btnPrimary} disabled={submitting}>
+                {submitting ? 'Sending...' : 'Send invite'}
+              </button>
             </div>
-            <div className={styles.modalBody}>
-              <div className={styles.field}>
-                <label className={styles.label}>Centre name</label>
-                <input 
-                  className={styles.input} 
-                  placeholder="e.g. Peckham Centre" 
-                  value={centreForm.name} 
-                  onChange={e => setCentreForm({ ...centreForm, name: e.target.value })} 
-                />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Address</label>
-                <input 
-                  className={styles.input} 
-                  placeholder="e.g. 42 Peckham High St, SE15" 
-                  value={centreForm.address} 
-                  onChange={e => setCentreForm({ ...centreForm, address: e.target.value })} 
-                />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Delivery available</label>
-                <select 
-                  className={styles.select} 
-                  value={centreForm.delivery} 
-                  onChange={e => setCentreForm({ ...centreForm, delivery: e.target.value })}
-                >
-                  <option value="Yes">Yes, delivery available</option>
-                  <option value="No">No delivery</option>
-                </select>
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Opening times</label>
-                <input 
-                  className={styles.input} 
-                  placeholder="e.g. Mon–Fri 9am–4pm" 
-                  value={centreForm.openingTimes} 
-                  onChange={e => setCentreForm({ ...centreForm, openingTimes: e.target.value })} 
-                />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Staff count</label>
-                <input 
-                  className={styles.input} 
-                  type="number" 
-                  min="0"
-                  value={centreForm.staff} 
-                  onChange={e => setCentreForm({ ...centreForm, staff: e.target.value })} 
-                />
-              </div>
-            </div>
-            <div className={styles.modalFooter}>
-              <button className={styles.btn} type="button" onClick={() => setCentreModalOpen(false)}>Cancel</button>
-              <button className={styles.btnPrimary} type="button" onClick={handleAddCentre}>Add centre</button>
-            </div>
-          </div>
-        </div>
+          </form>
+        </>
       )}
     </div>
   )

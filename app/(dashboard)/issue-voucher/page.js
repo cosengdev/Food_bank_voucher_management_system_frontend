@@ -1,23 +1,17 @@
 'use client'
-
-import { useState } from 'react'
-import {
-  mockClients, incomeOptions, referralOptions,
-  dietaryOptions, repeatReasons, householdOptions, mockCentres,
-} from '@/lib/mockData'
+import { useState, useEffect } from 'react'
+import { incomeOptions, referralOptions, householdOptions, repeatReasons, dietaryOptions } from '../../../lib/mockData'
+import { apiService } from '../../../lib/api'
 import styles from './issue-voucher.module.css'
 
 const STEP_LABELS = ['Client', 'Referral', 'Repeat Check', 'Dietary', 'Collection', 'Review']
 
 export default function IssueVoucherPage() {
-  const [step, setStep] = useState(0)
-
-  /* Step 1 */
-  const [search, setSearch] = useState('')
+  const [step, setStep] = useState(1)
+  const [clients, setClients] = useState([])
+  const [loadingClients, setLoadingClients] = useState(false)
   const [selectedClient, setSelectedClient] = useState(null)
-  const [newClient, setNewClient] = useState({ firstName: '', surname: '', address: '', postcode: '', yearOfBirth: '' })
-
-  /* Step 2 */
+  const [search, setSearch] = useState('')
   const [income, setIncome] = useState('')
   const [referrals, setReferrals] = useState([])
   const [household, setHousehold] = useState('')
@@ -37,17 +31,50 @@ export default function IssueVoucherPage() {
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [notes, setNotes] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  const client = selectedClient || (newClient.firstName ? { firstName: newClient.firstName, surname: newClient.surname, totalVouchers: 0 } : null)
-  const clientName = client ? `${client.firstName} ${client.surname}` : ''
-  const needsRepeatCheck = client && client.totalVouchers >= 3
+  // Reference data state from API
+  const [dynamicIncomeOptions, setDynamicIncomeOptions] = useState(incomeOptions)
+  const [dynamicReferralOptions, setDynamicReferralOptions] = useState(referralOptions)
+  const [dynamicRepeatReasons, setDynamicRepeatReasons] = useState(repeatReasons)
 
-  const filteredClients = search.length > 0
-    ? mockClients.filter(c =>
-        `${c.firstName} ${c.surname}`.toLowerCase().includes(search.toLowerCase()) ||
-        c.postcode.toLowerCase().includes(search.toLowerCase())
-      )
-    : mockClients
+  useEffect(() => {
+    async function loadReferenceData() {
+      try {
+        const [inc, ref, rep] = await Promise.all([
+          apiService.getIncomeSources().catch(() => null),
+          apiService.getReferralReasons().catch(() => null),
+          apiService.getRepeatVoucherReasons().catch(() => null)
+        ])
+        if (Array.isArray(inc)) setDynamicIncomeOptions(inc)
+        else if (inc?.data) setDynamicIncomeOptions(inc.data)
+
+        if (Array.isArray(ref)) setDynamicReferralOptions(ref)
+        else if (ref?.data) setDynamicReferralOptions(ref.data)
+
+        if (Array.isArray(rep)) setDynamicRepeatReasons(rep)
+        else if (rep?.data) setDynamicRepeatReasons(rep.data)
+      } catch (e) {
+        console.warn('Using fallback static reference options')
+      }
+    }
+    loadReferenceData()
+  }, [])
+
+  useEffect(() => {
+    async function searchClients() {
+      try {
+        setLoadingClients(true)
+        const res = await apiService.getClients({ search })
+        setClients(Array.isArray(res) ? res : res.data || [])
+      } catch (err) {
+        console.error('Failed to fetch clients:', err)
+      } finally {
+        setLoadingClients(false)
+      }
+    }
+    searchClients()
+  }, [search])
 
   function toggleReferral(r) {
     if (referrals.includes(r)) {
@@ -58,32 +85,39 @@ export default function IssueVoucherPage() {
   }
 
   function toggleDietary(d) {
-    if (dietary.includes(d)) {
-      setDietary(dietary.filter(x => x !== d))
-    } else {
-      setDietary([...dietary, d])
+    if (dietary.includes(d)) setDietary(dietary.filter(x => x !== d))
+    else setDietary([...dietary, d])
+  }
+
+  const handleConfirmAndIssue = async () => {
+    if (!selectedClient) {
+      alert('Please select a client first.')
+      return
+    }
+    try {
+      setSubmitting(true)
+      const res = await apiService.issueVoucher({
+        clientId: selectedClient.id,
+        clientName: `${selectedClient.firstName} ${selectedClient.surname}`,
+        centre: 'Peckham',
+        isRepeat,
+        income,
+        referrals,
+        household,
+        collection,
+        notes,
+      })
+      alert(`✅ Voucher ${res.data.ref || ref} issued successfully!`)
+    } catch (err) {
+      alert('Failed to issue voucher: ' + err.message)
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  function next() {
-    if (step === 2 && !needsRepeatCheck) {
-      setStep(3)
-    }
-    if (step < 5) setStep(step + 1)
-  }
-
-  function back() {
-    if (step === 3 && !needsRepeatCheck) {
-      setStep(1)
-    } else if (step > 0) {
-      setStep(step - 1)
-    }
-  }
-
-  const today = new Date()
-  const expiry = new Date(today)
-  expiry.setDate(expiry.getDate() + 7)
-  const fmt = (d) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  const isRepeat = selectedClient && selectedClient.totalVouchers >= 3
+  const ref = 'COG-2024-0248'
+  const today = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
 
   return (
     <div className={styles.page}>
@@ -119,51 +153,27 @@ export default function IssueVoucherPage() {
             />
             <button className={styles.btnPrimary} type="button">Search</button>
           </div>
-
-          <div className={styles.clientList}>
-            {filteredClients.map(c => (
-              <div
-                key={c.id}
-                className={selectedClient?.id === c.id ? styles.clientCardActive : styles.clientCard}
-                onClick={() => setSelectedClient(c)}
-              >
+          {loadingClients ? (
+            <div style={{padding:'15px',color:'var(--text-muted)'}}>Searching clients...</div>
+          ) : (
+            clients.map(c => (
+              <div key={c.id} className={`${styles.clientResult} ${selectedClient?.id === c.id ? styles.selected : ''}`} onClick={() => setSelectedClient(c)}>
                 <div>
                   <div className={styles.clientName}>{c.firstName} {c.surname}</div>
-                  <div className={styles.clientMeta}>{c.postcode} · {c.totalVouchers} voucher{c.totalVouchers !== 1 ? 's' : ''} · Last: {c.lastIssued}</div>
+                  <div className={styles.clientMeta}>{c.postcode} · {c.totalVouchers} vouchers on record</div>
                 </div>
+                {selectedClient?.id === c.id && <span className={`${styles.pill} ${styles.pillBlue}`}>Selected ✓</span>}
               </div>
-            ))}
-          </div>
-
-          <hr className={styles.divider} />
-          <div className={styles.dividerLabel}>Client not found? Create a new record</div>
-
-          <div className={styles.formGrid}>
-            <div className={styles.field}>
-              <label className={styles.label}>First name</label>
-              <input className={styles.input} value={newClient.firstName} onChange={e => setNewClient({ ...newClient, firstName: e.target.value })} />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>Surname</label>
-              <input className={styles.input} value={newClient.surname} onChange={e => setNewClient({ ...newClient, surname: e.target.value })} />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>Address</label>
-              <input className={styles.input} value={newClient.address} onChange={e => setNewClient({ ...newClient, address: e.target.value })} />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>Postcode</label>
-              <input className={styles.input} value={newClient.postcode} onChange={e => setNewClient({ ...newClient, postcode: e.target.value })} />
-            </div>
-            <div className={styles.field}>
-              <label className={styles.label}>Year of birth (optional)</label>
-              <input className={styles.input} value={newClient.yearOfBirth} onChange={e => setNewClient({ ...newClient, yearOfBirth: e.target.value })} />
-            </div>
-          </div>
-
-          <div className={styles.btnRow}>
-            <div />
-            <button className={styles.btnPrimary} type="button" onClick={next} disabled={!client}>Continue →</button>
+            ))
+          )}
+          <div className={styles.divider}></div>
+          <div className={styles.sectionLabel}>Client not found? Create new:</div>
+          <div className={styles.grid2}>
+            <div className={styles.field}><label className={styles.label}>First name *</label><input className={styles.input} /></div>
+            <div className={styles.field}><label className={styles.label}>Surname *</label><input className={styles.input} /></div>
+            <div className={styles.field}><label className={styles.label}>Address</label><input className={styles.input} /></div>
+            <div className={styles.field}><label className={styles.label}>Postcode *</label><input className={styles.input} /></div>
+            <div className={styles.field}><label className={styles.label}>Year of birth</label><input className={styles.input} placeholder="Optional" /></div>
           </div>
         </div>
       )}
@@ -412,17 +422,14 @@ export default function IssueVoucherPage() {
               </div>
             </div>
           </div>
-
-          <div className={styles.checklist}>
-            <span>✓ Consent captured</span>
-            <span>✓ Repeat reason recorded</span>
-            <span>✓ Audit entry will be created</span>
-          </div>
-
-          <div className={styles.btnRow}>
-            <div>
-              <button className={styles.printBtn} type="button" onClick={() => window.print()}>🖨 Print</button>
-              <button className={styles.btn} type="button" onClick={back}>← Back</button>
+          <div className={styles.checklist}>✅ Consent captured &nbsp;&nbsp; ✅ Repeat reason recorded &nbsp;&nbsp; ✅ Audit entry will be created</div>
+          <div className={styles.stepNav}>
+            <button className={styles.btn} onClick={() => setStep(5)}>← Back</button>
+            <div style={{display:'flex',gap:'10px'}}>
+              <button className={styles.btn} onClick={() => window.print()}>🖨 Print</button>
+              <button className={styles.btnPrimary} onClick={handleConfirmAndIssue} disabled={submitting}>
+                {submitting ? 'Issuing...' : 'Confirm & Issue'}
+              </button>
             </div>
             <button
               className={styles.btnPrimary}

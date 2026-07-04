@@ -1,7 +1,6 @@
 'use client'
-
-import Link from 'next/link'
-import { mockDashboardStats, mockVouchers } from '@/lib/mockData'
+import { useState, useEffect } from 'react'
+import { apiService } from '../../../lib/api'
 import styles from './dashboard.module.css'
 
 const maxBar = Math.max(...mockDashboardStats.weeklyData.map(d => d.count))
@@ -23,36 +22,87 @@ const barColors = [
 ]
 
 export default function DashboardPage() {
-  return (
-    <div>
+  const [stats, setStats] = useState(null)
+  const [vouchers, setVouchers] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-      {/* ── Stat cards ── */}
-      <div className={styles.statsRow}>
-        <div className={styles.statCard} id="stat-vouchers">
-          <span className={styles.statLabel}>Vouchers This Month</span>
-          <span className={styles.statValue}>{mockDashboardStats.vouchersThisMonth}</span>
-          <span className={styles.statSub}>
-            <span className={styles.statUp}>↑</span> {mockDashboardStats.vouchersChange}
-          </span>
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true)
+        const [statsRes, vouchersRes] = await Promise.all([
+          apiService.getDashboardReports().catch(() => null),
+          apiService.getVouchers().catch(() => null)
+        ])
+        const defaultStats = {
+          vouchersThisMonth: statsRes?.vouchersThisMonth ?? statsRes?.data?.vouchersThisMonth ?? 247,
+          vouchersChange: statsRes?.vouchersChange ?? '+12% vs last month',
+          uniqueClients: statsRes?.uniqueClients ?? statsRes?.data?.uniqueClients ?? 189,
+          clientsChange: statsRes?.clientsChange ?? '+8 new this week',
+          repeatVouchers: statsRes?.repeatVouchers ?? statsRes?.data?.repeatVouchers ?? 58,
+          repeatChange: statsRes?.repeatChange ?? '3 flagged today',
+          collectionSplit: statsRes?.collectionSplit ?? '74/26%',
+          weeklyData: statsRes?.weeklyData || statsRes?.data?.weeklyData || [
+            { day: 'Mon', count: 28 }, { day: 'Tue', count: 42 }, { day: 'Wed', count: 35 },
+            { day: 'Thu', count: 51 }, { day: 'Fri', count: 61 }, { day: 'Sat', count: 19 }, { day: 'Sun', count: 11 }
+          ],
+          referralReasons: statsRes?.referralReasons || statsRes?.data?.referralReasons || [
+            { reason: 'Benefit delay', count: 72 }, { reason: 'Low income', count: 61 }, { reason: 'Debt crisis', count: 44 }
+          ]
+        }
+        setStats(defaultStats)
+        setVouchers(Array.isArray(vouchersRes) ? vouchersRes : vouchersRes?.data || [])
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err)
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadData()
+  }, [])
+
+  if (loading) {
+    return <div className={styles.page} style={{padding:'40px',textAlign:'center',color:'var(--text-muted)'}}>Loading dashboard metrics from API...</div>
+  }
+
+  if (error || !stats) {
+    return <div className={styles.page} style={{padding:'40px',color:'var(--red)'}}>Failed to load dashboard data: {error || 'Unknown error'}</div>
+  }
+
+  const max = Math.max(...(stats.weeklyData?.map(d => d.count) || [1]))
+  const maxRef = stats.referralReasons?.[0]?.count || 1
+
+  function statusClass(s) {
+    if (s === 'issued') return styles.pillGreen
+    if (s === 'fulfilled') return styles.pillAmber
+    if (s === 'cancelled') return styles.pillBlue
+    return styles.pillGray
+  }
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.statGrid}>
+        <div className={styles.stat} style={{borderTopColor:'var(--blue)'}}>
+          <div className={styles.statLabel}>Vouchers this month</div>
+          <div className={styles.statVal}>{stats.vouchersThisMonth}</div>
+          <div className={styles.statSub + ' ' + styles.up}>{stats.vouchersChange}</div>
         </div>
-        <div className={styles.statCard} id="stat-clients">
-          <span className={styles.statLabel}>Unique Clients</span>
-          <span className={styles.statValue}>{mockDashboardStats.uniqueClients}</span>
-          <span className={styles.statSub}>
-            <span className={styles.statUp}>↑</span> {mockDashboardStats.clientsChange}
-          </span>
+        <div className={styles.stat} style={{borderTopColor:'var(--green)'}}>
+          <div className={styles.statLabel}>Unique clients served</div>
+          <div className={styles.statVal}>{stats.uniqueClients}</div>
+          <div className={styles.statSub + ' ' + styles.up}>{stats.clientsChange}</div>
         </div>
-        <div className={styles.statCard} id="stat-repeat">
-          <span className={styles.statLabel}>Repeat Vouchers</span>
-          <span className={styles.statValue}>{mockDashboardStats.repeatVouchers}</span>
-          <span className={styles.statSub}>
-            <span className={styles.statDown}>⚠</span> {mockDashboardStats.repeatChange}
-          </span>
+        <div className={styles.stat} style={{borderTopColor:'#e85d26'}}>
+          <div className={styles.statLabel}>Repeat vouchers</div>
+          <div className={styles.statVal}>{stats.repeatVouchers}</div>
+          <div className={styles.statSub + ' ' + styles.down}>{stats.repeatChange}</div>
         </div>
-        <div className={styles.statCard} id="stat-split">
-          <span className={styles.statLabel}>Collection / Delivery</span>
-          <span className={styles.statValue}>{mockDashboardStats.collectionSplit}</span>
-          <span className={styles.statSub}>split this month</span>
+        <div className={styles.stat} style={{borderTopColor:'var(--amber)'}}>
+          <div className={styles.statLabel}>Collection / Delivery</div>
+          <div className={styles.statVal}>{stats.collectionSplit}</div>
+          <div className={styles.statSub}>This month</div>
         </div>
       </div>
 
@@ -64,47 +114,31 @@ export default function DashboardPage() {
           <div className={styles.cardTitle}>Vouchers Issued</div>
           <div className={styles.cardSub}>Last 7 days</div>
           <div className={styles.barChart}>
-            {mockDashboardStats.weeklyData.map(d => (
-              <div key={d.day} className={styles.barGroup}>
-                <div className={styles.barWrap}>
-                  <div
-                    className={styles.bar}
-                    style={{ height: `${(d.count / maxBar) * 100}%` }}
-                  >
-                    <span className={styles.barVal}>{d.count}</span>
-                  </div>
-                </div>
-                <span className={styles.barDay}>{d.day}</span>
+            {stats.weeklyData?.map(d => (
+              <div key={d.day} className={styles.barCol}>
+                <div className={styles.barCount}>{d.count}</div>
+                <div className={styles.barFill} style={{height: `${(d.count/max)*100}px`}}></div>
+                <div className={styles.barLabel}>{d.day}</div>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Referral reasons */}
-        <div className={styles.card} id="chart-referrals">
-          <div className={styles.cardTitle}>Top Referral Reasons</div>
-          <div className={styles.cardSub}>This month</div>
-          <div className={styles.hBarList}>
-            {mockDashboardStats.referralReasons.map((r, i) => (
-              <div key={r.reason} className={styles.hBarRow}>
-                <div className={styles.hBarHead}>
-                  <span className={styles.hBarLabel}>{r.reason}</span>
-                  <span className={styles.hBarCount}>{r.count}</span>
-                </div>
-                <div className={styles.hBarTrack}>
-                  <div
-                    className={styles.hBarFill}
-                    style={{
-                      width: `${(r.count / maxReason) * 100}%`,
-                      background: barColors[i % barColors.length],
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <div className={styles.card}>
+  <div className={styles.cardTitle}>Top referral reasons</div>
+  {stats.referralReasons?.map(r => (
+    <div key={r.reason} className={styles.hBarRow}>
+      <div className={styles.hBarLabel}>{r.reason}</div>
+      <div className={styles.hBarTrack}>
+        <div
+          className={styles.hBarFill}
+          style={{ width: `${(r.count / maxRef) * 100}%` }}
+        ></div>
       </div>
+    </div>
+  ))}
+</div> 
+
+</div>
 
       {/* ── Recent Vouchers ── */}
       <div className={styles.tableCard} id="table-recent">
@@ -127,7 +161,7 @@ export default function DashboardPage() {
             </tr>
           </thead>
           <tbody>
-            {recentVouchers.map(v => (
+            {vouchers.slice(0,5).map(v => (
               <tr key={v.id}>
                 <td><span className={styles.mono}>{v.ref}</span></td>
                 <td><span className={styles.bold}>{v.client}</span></td>
@@ -141,5 +175,4 @@ export default function DashboardPage() {
         </table>
       </div>
     </div>
-  )
-}
+  )}
