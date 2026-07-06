@@ -1,16 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { apiService } from '../../../lib/api'
 import styles from './settings.module.css'
-
-const rolePill = (role) => {
-  if (role === 'Super Admin') return styles.pillNavy
-  if (role === 'Centre Admin') return styles.pillGreen
-  if (role === 'Read-only') return styles.pillAmber
-  return styles.pillGray
-}
-
-const statusPill = (s) => (s === 'active' ? styles.pillGreen : styles.pillRed)
 
 const permissions = [
   { action: 'Issue vouchers',         superAdmin: true, centreAdmin: true, staff: true, volunteer: true, readOnly: false },
@@ -25,64 +17,23 @@ const permissions = [
 const roleClass = { 'Centre Admin': 'pillBlue', 'Staff': 'pillGray', 'Volunteer': 'pillGray', 'Read-only': 'pillAmber', 'Super Admin': 'pillNavy', 'super_admin': 'pillNavy' }
 
 export default function SettingsPage() {
+  const router = useRouter()
+
   const [staff, setStaff] = useState([])
   const [centres, setCentres] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Invite user modal
   const [modalOpen, setModalOpen] = useState(false)
-  const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: '', centre: '' })
-  const [staff, setStaff] = useState(mockStaff)
-  const [centres, setCentres] = useState(mockCentres)
-  
-  const [centreModalOpen, setCentreModalOpen] = useState(false)
-  const [centreForm, setCentreForm] = useState({ name: '', address: '', delivery: 'Yes', openingTimes: '', staff: '0' })
-
-  function handleLogout() {
-    localStorage.removeItem('token')
-    sessionStorage.clear()
-    router.push('/login')
-  }
-
-  function handleInvite() {
-    if (!inviteForm.name || !inviteForm.email || !inviteForm.role || !inviteForm.centre) {
-      alert('Please fill in all fields.')
-      return
-    }
-    const newStaff = {
-      id: staff.length + 1,
-      name: inviteForm.name,
-      role: inviteForm.role,
-      centre: inviteForm.centre,
-      status: 'active'
-    }
-    setStaff([...staff, newStaff])
-    setModalOpen(false)
-    setInviteForm({ name: '', email: '', role: '', centre: '' })
-  }
-
-  function handleAddCentre() {
-    if (!centreForm.name || !centreForm.address || !centreForm.openingTimes) {
-      alert('Please fill in all fields.')
-      return
-    }
-    const newCentre = {
-      id: centres.length + 1,
-      name: centreForm.name,
-      address: centreForm.address,
-      delivery: centreForm.delivery === 'Yes',
-      openingTimes: centreForm.openingTimes,
-      staff: parseInt(centreForm.staff, 10) || 0
-    }
-    setCentres([...centres, newCentre])
-    setCentreModalOpen(false)
-    setCentreForm({ name: '', address: '', delivery: 'Yes', openingTimes: '', staff: '0' })
-  }
-
-  // Invite user form
   const [inviteName, setInviteName] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('Centre Admin')
   const [inviteCentre, setInviteCentre] = useState('')
   const [submitting, setSubmitting] = useState(false)
+
+  // Add centre modal
+  const [centreModalOpen, setCentreModalOpen] = useState(false)
+  const [centreForm, setCentreForm] = useState({ name: '', address: '', delivery: 'Yes', openingTimes: '', staff: '0' })
 
   const loadSettingsData = async () => {
     try {
@@ -103,6 +54,12 @@ export default function SettingsPage() {
   useEffect(() => {
     loadSettingsData()
   }, [])
+
+  function handleLogout() {
+    localStorage.removeItem('token')
+    sessionStorage.clear()
+    router.push('/login')
+  }
 
   const handleInviteUser = async (e) => {
     e?.preventDefault()
@@ -126,6 +83,25 @@ export default function SettingsPage() {
     }
   }
 
+  function handleAddCentre(e) {
+    e?.preventDefault()
+    if (!centreForm.name || !centreForm.address || !centreForm.openingTimes) {
+      alert('Please fill in all fields.')
+      return
+    }
+    const newCentre = {
+      id: centres.length + 1,
+      name: centreForm.name,
+      address: centreForm.address,
+      delivery: centreForm.delivery === 'Yes',
+      openingTimes: centreForm.openingTimes,
+      staff: parseInt(centreForm.staff, 10) || 0
+    }
+    setCentres([...centres, newCentre])
+    setCentreModalOpen(false)
+    setCentreForm({ name: '', address: '', delivery: 'Yes', openingTimes: '', staff: '0' })
+  }
+
   return (
     <div>
       {/* Two cards side by side */}
@@ -142,7 +118,7 @@ export default function SettingsPage() {
               <tbody>
                 {staff.map((s, idx) => (
                   <tr key={s.id || idx}>
-                    <td><strong>{s.name || s.first_name + ' ' + s.last_name || s.email}</strong></td>
+                    <td><strong>{s.name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : s.email)}</strong></td>
                     <td><span className={`${styles.pill} ${styles[roleClass[s.role]] || styles.pillGray}`}>{s.role}</span></td>
                     <td>{s.centre || 'All centres'}</td>
                     <td><span className={`${styles.pill} ${styles.pillGreen}`}>{s.status || 'Active'}</span></td>
@@ -174,7 +150,7 @@ export default function SettingsPage() {
               </tbody>
             </table>
           )}
-          <button className={styles.btnPrimary} style={{marginTop:'14px'}}>+ Add centre</button>
+          <button className={styles.btnPrimary} style={{marginTop:'14px'}} onClick={() => setCentreModalOpen(true)}>+ Add centre</button>
         </div>
       </div>
 
@@ -247,6 +223,33 @@ export default function SettingsPage() {
               <button type="submit" className={styles.btnPrimary} disabled={submitting}>
                 {submitting ? 'Sending...' : 'Send invite'}
               </button>
+            </div>
+          </form>
+        </>
+      )}
+
+      {/* Add centre modal */}
+      {centreModalOpen && (
+        <>
+          <div className={styles.overlay} onClick={() => setCentreModalOpen(false)}></div>
+          <form className={styles.modal} onSubmit={handleAddCentre}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalTitle}>Add Centre</div>
+              <button type="button" className={styles.closeBtn} onClick={() => setCentreModalOpen(false)}>×</button>
+            </div>
+            <div className={styles.field}><label className={styles.label}>Centre name</label><input className={styles.input} value={centreForm.name} onChange={e => setCentreForm({ ...centreForm, name: e.target.value })} required /></div>
+            <div className={styles.field}><label className={styles.label}>Address</label><input className={styles.input} value={centreForm.address} onChange={e => setCentreForm({ ...centreForm, address: e.target.value })} required /></div>
+            <div className={styles.field}><label className={styles.label}>Delivery available</label>
+              <select className={styles.input} value={centreForm.delivery} onChange={e => setCentreForm({ ...centreForm, delivery: e.target.value })}>
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+            <div className={styles.field}><label className={styles.label}>Opening times</label><input className={styles.input} value={centreForm.openingTimes} onChange={e => setCentreForm({ ...centreForm, openingTimes: e.target.value })} required /></div>
+            <div className={styles.field}><label className={styles.label}>Staff count</label><input type="number" min="0" className={styles.input} value={centreForm.staff} onChange={e => setCentreForm({ ...centreForm, staff: e.target.value })} /></div>
+            <div className={styles.modalActions}>
+              <button type="button" className={styles.btn} onClick={() => setCentreModalOpen(false)}>Cancel</button>
+              <button type="submit" className={styles.btnPrimary}>Add centre</button>
             </div>
           </form>
         </>
