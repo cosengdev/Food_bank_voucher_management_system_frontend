@@ -3,18 +3,6 @@ import { useState, useEffect } from 'react'
 import { apiService } from '../../../lib/api'
 import styles from './audit.module.css'
 
-const dotClass = (type) => {
-  switch (type) {
-    case 'auth': return styles.dotAuth
-    case 'voucher': return styles.dotVoucher
-    case 'consent': return styles.dotConsent
-    case 'export': return styles.dotExport
-    case 'client': return styles.dotClient
-    case 'cancel': return styles.dotCancel
-    default: return styles.dotAuth
-  }
-}
-
 const actionTypes = [
   { value: 'all', label: 'All actions' },
   { value: 'auth', label: 'Login / Logout' },
@@ -66,19 +54,19 @@ export default function AuditPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <select className={styles.select} value={actionFilter} onChange={e => setActionFilter(e.target.value)}>
+        <select className={styles.select} value={type} onChange={e => setType(e.target.value)}>
           {actionTypes.map(a => (
             <option key={a.value} value={a.value}>{a.label}</option>
           ))}
         </select>
-        <select className={styles.select} value={userFilter} onChange={e => setUserFilter(e.target.value)}>
+        <select className={styles.select} value={user} onChange={e => setUser(e.target.value)}>
           {users.map(u => (
             <option key={u.value} value={u.value}>{u.label}</option>
           ))}
         </select>
       </div>
 
-      <div className={styles.resultCount}>Showing {filtered.length} entr{filtered.length !== 1 ? 'ies' : 'y'}</div>
+      <div className={styles.resultCount}>Showing {auditLogs.length} entr{auditLogs.length !== 1 ? 'ies' : 'y'}</div>
 
       {/* Audit entries */}
       <div className={styles.card}>

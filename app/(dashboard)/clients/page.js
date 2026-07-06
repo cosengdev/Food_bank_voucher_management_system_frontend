@@ -17,8 +17,6 @@ export default function ClientsPage() {
   const [search, setSearch] = useState('')
   const [flagFilter, setFlagFilter] = useState('all')
   const [panelOpen, setPanelOpen] = useState(false)
-  const [panelClient, setPanelClient] = useState(null)
-  const [form, setForm] = useState({ firstName: '', surname: '', address: '', postcode: '', yearOfBirth: '' })
 
   // New Client form state
   const [newFirstName, setNewFirstName] = useState('')
@@ -31,7 +29,7 @@ export default function ClientsPage() {
   const fetchClients = async () => {
     try {
       setLoading(true)
-      const res = await apiService.getClients({ search, flag: filter })
+      const res = await apiService.getClients({ search, flag: flagFilter })
       setClients(res.data || [])
     } catch (err) {
       console.error('Failed to fetch clients:', err)
@@ -42,7 +40,7 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchClients()
-  }, [search, filter])
+  }, [search, flagFilter])
 
   const handleCreateClient = async (e) => {
     e.preventDefault()
@@ -73,23 +71,6 @@ export default function ClientsPage() {
     }
   }
 
-  function openNew() {
-    setPanelClient(null)
-    setForm({ firstName: '', surname: '', address: '', postcode: '', yearOfBirth: '' })
-    setPanelOpen(true)
-  }
-
-  function openEdit(c) {
-    setPanelClient(c)
-    setForm({ firstName: c.firstName, surname: c.surname, address: '', postcode: c.postcode, yearOfBirth: c.yearOfBirth || '' })
-    setPanelOpen(true)
-  }
-
-  function closePanel() {
-    setPanelOpen(false)
-    setPanelClient(null)
-  }
-
   return (
     <div className={styles.page}>
       <div className={styles.toolbar}>
@@ -111,7 +92,7 @@ export default function ClientsPage() {
         ))}
       </div>
 
-      <div className={styles.resultCount}>Showing {filtered.length} client{filtered.length !== 1 ? 's' : ''}</div>
+      <div className={styles.resultCount}>Showing {clients.length} client{clients.length !== 1 ? 's' : ''}</div>
 
       {/* Table */}
       <div className={styles.card}>
@@ -121,16 +102,19 @@ export default function ClientsPage() {
           <table className={styles.tbl}>
             <thead><tr><th>Name</th><th>Postcode</th><th>Year of birth</th><th>Total vouchers</th><th>Last issued</th><th>Flag</th></tr></thead>
             <tbody>
-              {clients.map(c => (
-                <tr key={c.id} style={{cursor:'pointer'}}>
-                  <td><strong>{c.firstName} {c.surname}</strong></td>
-                  <td>{c.postcode}</td>
-                  <td>{c.yearOfBirth || '—'}</td>
-                  <td>{c.totalVouchers}</td>
-                  <td>{c.lastIssued}</td>
-                  <td><span className={`${styles.pill} ${flagClass[c.flag] || styles.pillGreen}`}>{flagLabel[c.flag] || 'Normal'}</span></td>
-                </tr>
-              ))}
+              {clients.map(c => {
+                const pill = flagPill(c.flag)
+                return (
+                  <tr key={c.id} style={{cursor:'pointer'}}>
+                    <td><strong>{c.firstName} {c.surname}</strong></td>
+                    <td>{c.postcode}</td>
+                    <td>{c.yearOfBirth || '—'}</td>
+                    <td>{c.totalVouchers}</td>
+                    <td>{c.lastIssued}</td>
+                    <td><span className={`${styles.pill} ${pill.cls}`}>{pill.label}</span></td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}

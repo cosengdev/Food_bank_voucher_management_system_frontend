@@ -6,8 +6,11 @@ import styles from './issue-voucher.module.css'
 
 const STEP_LABELS = ['Client', 'Referral', 'Repeat Check', 'Dietary', 'Collection', 'Review']
 
+// TODO: replace with the real centre for this voucher (from the API / the selected centre).
+const centre = { name: 'Peckham', address: '—', openingTimes: '—' }
+
 export default function IssueVoucherPage() {
-  const [step, setStep] = useState(1)
+  const [step, setStep] = useState(0)
   const [clients, setClients] = useState([])
   const [loadingClients, setLoadingClients] = useState(false)
   const [selectedClient, setSelectedClient] = useState(null)
@@ -33,7 +36,7 @@ export default function IssueVoucherPage() {
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  // Reference data state from API
+  // Reference data state from API (falls back to the static imports)
   const [dynamicIncomeOptions, setDynamicIncomeOptions] = useState(incomeOptions)
   const [dynamicReferralOptions, setDynamicReferralOptions] = useState(referralOptions)
   const [dynamicRepeatReasons, setDynamicRepeatReasons] = useState(repeatReasons)
@@ -76,6 +79,17 @@ export default function IssueVoucherPage() {
     searchClients()
   }, [search])
 
+  // ── Derived values ──
+  const clientName = selectedClient ? `${selectedClient.firstName} ${selectedClient.surname}` : ''
+  const isRepeat = !!(selectedClient && selectedClient.totalVouchers >= 3)
+  const ref = 'COG-2024-0248'
+  const fmtDate = (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const today = new Date()
+  const expiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+
+  const next = () => setStep(s => Math.min(s + 1, STEP_LABELS.length - 1))
+  const back = () => setStep(s => Math.max(s - 1, 0))
+
   function toggleReferral(r) {
     if (referrals.includes(r)) {
       setReferrals(referrals.filter(x => x !== r))
@@ -98,26 +112,26 @@ export default function IssueVoucherPage() {
       setSubmitting(true)
       const res = await apiService.issueVoucher({
         clientId: selectedClient.id,
-        clientName: `${selectedClient.firstName} ${selectedClient.surname}`,
-        centre: 'Peckham',
+        clientName,
+        centre: centre.name,
         isRepeat,
+        repeatReason,
         income,
         referrals,
         household,
-        collection,
+        dietary,
+        collectionMethod,
+        phone,
+        email,
         notes,
       })
-      alert(`✅ Voucher ${res.data.ref || ref} issued successfully!`)
+      alert(`✅ Voucher ${res?.data?.ref || ref} issued successfully!`)
     } catch (err) {
       alert('Failed to issue voucher: ' + err.message)
     } finally {
       setSubmitting(false)
     }
   }
-
-  const isRepeat = selectedClient && selectedClient.totalVouchers >= 3
-  const ref = 'COG-2024-0248'
-  const today = new Date().toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'})
 
   return (
     <div className={styles.page}>
@@ -175,6 +189,10 @@ export default function IssueVoucherPage() {
             <div className={styles.field}><label className={styles.label}>Postcode *</label><input className={styles.input} /></div>
             <div className={styles.field}><label className={styles.label}>Year of birth</label><input className={styles.input} placeholder="Optional" /></div>
           </div>
+
+          <div className={styles.btnRow}>
+            <button className={styles.btnPrimary} type="button" onClick={next} disabled={!selectedClient}>Continue →</button>
+          </div>
         </div>
       )}
 
@@ -183,13 +201,13 @@ export default function IssueVoucherPage() {
         <div className={styles.card}>
           <div className={styles.cardTitle}>Step 2 — Referral &amp; Income</div>
 
-          <div className={styles.infoBanner}>Selected client: {clientName}</div>
+          <div className={styles.infoBanner}>Selected client: {clientName || '—'}</div>
 
           <div className={styles.field}>
             <label className={styles.label}>Source of income</label>
             <select className={styles.select} value={income} onChange={e => setIncome(e.target.value)}>
               <option value="">Select...</option>
-              {incomeOptions.map(o => <option key={o} value={o}>{o}</option>)}
+              {dynamicIncomeOptions.map(o => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
 
@@ -197,7 +215,7 @@ export default function IssueVoucherPage() {
             <label className={styles.label}>Referral reasons</label>
             <div className={styles.tagMax}>Select up to 4 reasons</div>
             <div className={styles.tags}>
-              {referralOptions.map(r => (
+              {dynamicReferralOptions.map(r => (
                 <span
                   key={r}
                   className={referrals.includes(r) ? styles.tagActive : styles.tag}
@@ -229,17 +247,17 @@ export default function IssueVoucherPage() {
         <div className={styles.card}>
           <div className={styles.cardTitle}>Step 3 — Repeat Voucher Check</div>
 
-          {needsRepeatCheck ? (
+          {isRepeat ? (
             <>
               <div className={styles.warnBanner}>
-                ⚠ Repeat voucher flag: {clientName} has received {client.totalVouchers} vouchers in the last 6 months.
+                ⚠ Repeat voucher flag: {clientName} has received {selectedClient?.totalVouchers} vouchers in the last 6 months.
               </div>
 
               <div className={styles.field}>
                 <label className={styles.label}>Reason for repeat voucher</label>
                 <select className={styles.select} value={repeatReason} onChange={e => setRepeatReason(e.target.value)}>
                   <option value="">Select reason...</option>
-                  {repeatReasons.map(r => <option key={r} value={r}>{r}</option>)}
+                  {dynamicRepeatReasons.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
 
@@ -265,7 +283,7 @@ export default function IssueVoucherPage() {
             </>
           ) : (
             <div className={styles.infoBanner}>
-              ✓ No repeat flag — {clientName} has {client?.totalVouchers || 0} voucher{client?.totalVouchers !== 1 ? 's' : ''} on record. No additional checks required.
+              ✓ No repeat flag — {clientName || 'this client'} has {selectedClient?.totalVouchers || 0} voucher{selectedClient?.totalVouchers !== 1 ? 's' : ''} on record. No additional checks required.
             </div>
           )}
 
@@ -386,7 +404,7 @@ export default function IssueVoucherPage() {
 
           <div className={styles.preview}>
             <div className={styles.previewTitle}>City of God Foodbank — Voucher</div>
-            <div className={styles.previewRef}>COG-2024-0248</div>
+            <div className={styles.previewRef}>{ref}</div>
             <div className={styles.previewGrid}>
               <div className={styles.previewRow}>
                 <span className={styles.previewLabel}>Client</span>
@@ -406,38 +424,31 @@ export default function IssueVoucherPage() {
               </div>
               <div className={styles.previewRow}>
                 <span className={styles.previewLabel}>Centre</span>
-                <span className={styles.previewValue}>{mockCentres[0].address}</span>
+                <span className={styles.previewValue}>{centre.address}</span>
               </div>
               <div className={styles.previewRow}>
                 <span className={styles.previewLabel}>Opening times</span>
-                <span className={styles.previewValue}>{mockCentres[0].openingTimes}</span>
+                <span className={styles.previewValue}>{centre.openingTimes}</span>
               </div>
               <div className={styles.previewRow}>
                 <span className={styles.previewLabel}>Issue date</span>
-                <span className={styles.previewValue}>{fmt(today)}</span>
+                <span className={styles.previewValue}>{fmtDate(today)}</span>
               </div>
               <div className={styles.previewRow}>
                 <span className={styles.previewLabel}>Expiry date</span>
-                <span className={styles.previewValue}>{fmt(expiry)}</span>
+                <span className={styles.previewValue}>{fmtDate(expiry)}</span>
               </div>
             </div>
           </div>
           <div className={styles.checklist}>✅ Consent captured &nbsp;&nbsp; ✅ Repeat reason recorded &nbsp;&nbsp; ✅ Audit entry will be created</div>
           <div className={styles.stepNav}>
-            <button className={styles.btn} onClick={() => setStep(5)}>← Back</button>
+            <button className={styles.btn} type="button" onClick={back}>← Back</button>
             <div style={{display:'flex',gap:'10px'}}>
-              <button className={styles.btn} onClick={() => window.print()}>🖨 Print</button>
-              <button className={styles.btnPrimary} onClick={handleConfirmAndIssue} disabled={submitting}>
+              <button className={styles.btn} type="button" onClick={() => window.print()}>🖨 Print</button>
+              <button className={styles.btnPrimary} type="button" onClick={handleConfirmAndIssue} disabled={submitting}>
                 {submitting ? 'Issuing...' : 'Confirm & Issue'}
               </button>
             </div>
-            <button
-              className={styles.btnPrimary}
-              type="button"
-              onClick={() => alert('Voucher COG-2024-0248 has been issued successfully and logged in the audit trail.')}
-            >
-              Confirm &amp; Issue Voucher
-            </button>
           </div>
         </div>
       )}
